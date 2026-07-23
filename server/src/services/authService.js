@@ -1,0 +1,45 @@
+const User = require("../models/User");
+const ApiError = require("../utils/ApiError");
+
+const registerUserService = async (userData) => {
+  const { fullName, email, phone, password, role } = userData;
+
+  const existingUser = await User.findOne({
+    $or: [{ email }, { phone }],
+  });
+
+  if (existingUser) {
+    throw new ApiError(409, "User already exists");
+  }
+
+  const user = await User.create({
+    fullName,
+    email,
+    phone,
+    password,
+    role,
+  });
+
+  return await User.findById(user._id).select("-password");
+};
+
+const loginUserService = async (email, password) => {
+  const user = await User.findOne({ email }).select("+password");
+
+  if (!user) {
+    throw new ApiError(401, "Invalid email or password");
+  }
+
+  const isMatch = await user.comparePassword(password);
+
+  if (!isMatch) {
+    throw new ApiError(401, "Invalid email or password");
+  }
+
+  return user;
+};
+
+module.exports = {
+  registerUserService,
+  loginUserService,
+};
